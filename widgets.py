@@ -20,8 +20,8 @@ class LineNumberArea(QtWidgets.QWidget):
         self.editor.line_number_area_paint_event(event)
 
 class CodeEditor(QtWidgets.QPlainTextEdit):
-    def __init__(self, language):
-        super().__init__()
+    def __init__(self, language, parent=None):
+        super().__init__(parent)
         self.font_size = 12
 
         # General
@@ -139,8 +139,8 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
 
 
 class AutoIndentCodeEditor(CodeEditor):
-    def __init__(self, language):
-        super().__init__(language)
+    def __init__(self, language, parent=None):
+        super().__init__(language, parent)
         self.control_modifier = False
         self.shift_modifier = False
 
@@ -224,6 +224,6 @@ class AutoIndentCodeEditor(CodeEditor):
 
 
 class PythonCodeEditor(AutoIndentCodeEditor):
-    def __init__(self, language):
-        super().__init__(language)
+    def __init__(self, language, parent=None):
+        super().__init__(language, parent)
         self.set_highlighter(syntax.PythonHighlighter)
