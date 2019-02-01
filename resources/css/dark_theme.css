@@ -1,0 +1,65 @@
+
+QMainWindow{
+ background: #30384c;
+}
+
+/* MENU BAR STYLE */
+
+QMenuBar{
+     background: #30384c;
+     color: #A9B7C6;
+     font-family: Consolas;
+     border-bottom: 1px solid #49597c;
+     font-size: 12;
+     padding: 2px;
+}
+
+QMenuBar::item:selected{
+    background: #39435b;
+    color: #afbece;
+}
+
+/* MENU DROPDOWN STYLE */
+
+QMenu{
+    background-color: #30384c;
+    border: 2px solid #49597c;
+    color: #A9B7C6;
+    font-family: Consolas;
+}
+
+QMenu::item{
+    background: transparent;
+}
+
+QMenu::item::selected{
+    color: #afbece;
+    background: #39435b;
+}
+
+/* TAB BAR STYLE */
+QTabWidget::pane{
+    border-top: 1px solid #49597c;
+}
+
+QTabBar::tab{
+    background: #30384c;
+    color: #A9B7C6;
+    text-align: center;
+    min-width: 10em;
+    height: 24px;
+    font-family: Consolas;
+}
+
+QTabBar::tab:selected{
+    background: #414b66;
+    border-bottom: 2px solid white;
+}
+
+QTabBar::close-button{
+    image: url(resources/img/close_button.png);
+}
+
+QTabBar::close-button:hover{
+    image: url(resources/img/close_button_hover.png);
+}

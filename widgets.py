@@ -8,6 +8,13 @@ def qcolor_to_string(qcolor):
     r, g, b, a = qcolor.red(), qcolor.green(), qcolor.blue(), qcolor.alpha()
     return f'rgba({r}, {g}, {b}, {a})'
 
+
+class CodeTabWidget(QtWidgets.QTabWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTabsClosable(True)
+        self.setMovable(True)
+
 class LineNumberArea(QtWidgets.QWidget):
     def __init__(self, editor):
         super().__init__(editor)
@@ -86,7 +93,8 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         selection_colour = qcolor_to_string(self.theme['cursor_selection_colour'])
         self.setStyleSheet(f'background: {background_colour};'
                            f'color: {identifiers_colour};'
-                           f'selection-background-color: {selection_colour};')
+                           f'selection-background-color: {selection_colour};'
+                           'border: none;')
 
     def line_numbers_area_width(self):
         '''Get the calcuated width of the line number area'''
@@ -116,6 +124,9 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         painter.fillRect(event.rect(), self.theme['editor_background'].lighter(105))
         block = self.firstVisibleBlock()
         total_lines = self.blockCount()
+        font = QtGui.QFont(self.font_family)
+        font.setPointSize(self.font_size)
+        painter.setFont(font)
 
         blockNumber = block.blockNumber()
         top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
@@ -158,8 +169,6 @@ class AutoIndentCodeEditor(CodeEditor):
             self.backspace(event)
         elif event.key() == QtCore.Qt.Key_Tab:
             self.indent(self.language.indent_width)
-        elif event.key() == QtCore.Qt.Key_S and self.control_modifier:
-            self.save_code()
         else:
             super().keyPressEvent(event)
 
@@ -171,13 +180,13 @@ class AutoIndentCodeEditor(CodeEditor):
 
         super().keyReleaseEvent(event)
 
-    def save_code(self):
+    def autopep8_code(self):
         cursor = self.textCursor()
         position = self.textCursor().position()
         scrollbar = self.verticalScrollBar().value()
 
         cursor.select(cursor.Document)
-        cursor.insertText(autopep8.fix_code(self.toPlainText()))
+        cursor.insertText(autopep8.fix_code(self.toPlainText(), options={'ignore': ['E501']}))
         cursor.setPosition(position)
 
         self.setTextCursor(cursor)
@@ -224,6 +233,6 @@ class AutoIndentCodeEditor(CodeEditor):
 
 
 class PythonCodeEditor(AutoIndentCodeEditor):
-    def __init__(self, language, parent=None):
-        super().__init__(language, parent)
+    def __init__(self, parent=None):
+        super().__init__(syntax.python, parent)
         self.set_highlighter(syntax.PythonHighlighter)
