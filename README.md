@@ -14,4 +14,4 @@ This is an IDE coded in python, it is work in progress at the moment and doesnt 
 cant think of anything else at the moment
 
 ### Screenshots
-<img src="https://i.imgur.com/kFkIDfw.gifv">
+https://i.imgur.com/kFkIDfw.gifv
