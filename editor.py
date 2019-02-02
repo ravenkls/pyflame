@@ -1,20 +1,31 @@
-from widgets import PythonCodeEditor, CodeTabWidget
-from PyQt5 import QtWidgets, QtCore
+from widgets import PythonCodeEditor, CodeTabWidget, ProjectStructureDock
+from PyQt5 import QtWidgets, QtCore, QtGui
 import syntax
 import sys
 import os
-
 
 class PyFlame(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
         self.modal_dialog = None
+
+        # Code Area
         self.tab_widget = CodeTabWidget()
+        self.tab_widget.tabCloseRequested.connect(self.close_editor_tab)
+
+        # Project Folder Area
+        self.project_structure = ProjectStructureDock(self)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.project_structure)
+        self.project_structure.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
+        self.project_structure.file_opened.connect(self.new_editor_tab)
+
         self.setCentralWidget(self.tab_widget)
         self.configure_menu()
         self.load_css(os.path.join('resources', 'css', 'dark_theme.css'))
         self.setMinimumSize(640, 480)
+        self.tabs_metadata = {}
+        self.files_open = []
 
     def load_css(self, path):
         with open(path) as css_file:
@@ -61,19 +72,11 @@ class PyFlame(QtWidgets.QMainWindow):
                                    self.rect().center().y() - self.modal_dialog.height() // 2)
 
     def new_editor_tab(self, path):
-        if os.path.exists(path):
-            with open(path) as file:
-                contents = file.read()
-        else:
-            with open(path, 'w') as file:
-                contents = ''
+        widget = self.tab_widget.addTab(path)
+        self.tab_widget.setCurrentWidget(widget)
 
-        tab_name = os.path.basename(path)
-        code_widget = PythonCodeEditor(self)
-        code_widget.setPlainText(contents)
-        code_widget.setFocus()
-        index = self.tab_widget.addTab(code_widget, tab_name)
-        self.tab_widget.setCurrentIndex(index)
+    def close_editor_tab(self, tab_index):
+        self.tab_widget.removeTab(tab_index)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape and self.modal_dialog:

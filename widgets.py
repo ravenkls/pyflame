@@ -1,19 +1,90 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from itertools import accumulate
+from bidict import MutableBidict
 import autopep8
 import syntax
 import re
+import os
 
 def qcolor_to_string(qcolor):
     r, g, b, a = qcolor.red(), qcolor.green(), qcolor.blue(), qcolor.alpha()
     return f'rgba({r}, {g}, {b}, {a})'
 
 
+class ProjectStructureDock(QtWidgets.QDockWidget):
+
+    file_opened = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__('Project Structure', parent)
+        self.title_bar = QtWidgets.QWidget(self)
+        self.title_bar.setObjectName('dock_title')
+        title_layout = QtWidgets.QHBoxLayout(self.title_bar)
+        title_layout.setContentsMargins(5, 0, 5, 0)
+
+        self.title_label = QtWidgets.QLabel('Project Structure', self.title_bar)
+        self.title_label.setObjectName('dock_title_label')
+        size_policy = QtWidgets.QSizePolicy()
+        size_policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
+        self.title_label.setSizePolicy(size_policy)
+        title_layout.addWidget(self.title_label)
+
+        self.close_button = QtWidgets.QPushButton(self.title_bar)
+        self.close_button.setObjectName('dock_close')
+        self.close_button.clicked.connect(self.close)
+        title_layout.addWidget(self.close_button)
+
+        self.title_bar.setLayout(title_layout)
+        self.setTitleBarWidget(self.title_bar)
+        self.init_project_structure_widget()
+
+    def init_project_structure_widget(self):
+        self.filesystem_model = QtWidgets.QFileSystemModel()
+        self.filesystem_model.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
+        self.project_structure_tree = QtWidgets.QTreeView(self)
+        self.project_structure_tree.setModel(self.filesystem_model)
+        self.project_structure_tree.setRootIndex(self.filesystem_model.setRootPath(os.getcwd()))
+        self.project_structure_tree.hideColumn(1) # Size Column
+        self.project_structure_tree.hideColumn(2) # Type Column
+        self.project_structure_tree.hideColumn(3) # Date Modified Column
+        self.project_structure_tree.setObjectName('project_structure')
+        self.project_structure_tree.setHeaderHidden(True)
+        self.project_structure_tree.activated.connect(self.item_clicked)
+        #self.project_structure_tree.doubleClicked.connect(self.item_clicked)
+        self.setWidget(self.project_structure_tree)
+
+    def item_clicked(self, index):
+        path = str(self.filesystem_model.filePath(index))
+        if os.path.isfile(path):
+            self.file_opened.emit(path)
+
+
+
 class CodeTabWidget(QtWidgets.QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.open_editors = MutableBidict()
         self.setTabsClosable(True)
         self.setMovable(True)
+
+    def addTab(self, path):
+        if os.path.exists(path):
+            with open(path) as file:
+                contents = file.read()
+        else:
+            with open(path, 'w') as file:
+                contents = ''
+
+        tab_name = os.path.basename(path)
+        if not self.open_editors.get(path):
+            code_widget = PythonCodeEditor(self)
+            code_widget.setPlainText(contents)
+            code_widget.setFocus()
+            self.open_editors[path] = code_widget
+            super().addTab(self.open_editors[path], tab_name)
+
+        return self.open_editors[path]
+
 
 class LineNumberArea(QtWidgets.QWidget):
     def __init__(self, editor):
@@ -152,8 +223,14 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
 class AutoIndentCodeEditor(CodeEditor):
     def __init__(self, language, parent=None):
         super().__init__(language, parent)
-        self.control_modifier = False
-        self.shift_modifier = False
+
+    @property
+    def control_modifier(self):
+        return QtWidgets.QApplication.keyboardModifiers() == QtCore.Qt.ControlModifier
+
+    @property
+    def shift_modifier(self):
+        return QtWidgets.QApplication.keyboardModifiers() == QtCore.Qt.ControlModifier
 
     def wheelEvent(self, event):
         if self.control_modifier:
@@ -168,11 +245,6 @@ class AutoIndentCodeEditor(CodeEditor):
             super().wheelEvent(event)
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Control:
-            self.control_modifier = True
-        elif event.key() == QtCore.Qt.Key_Shift:
-            self.shift_modifier = True
-
         if event.key() == QtCore.Qt.Key_Return:
             self.newline(event)
         elif event.key() == QtCore.Qt.Key_Backspace:
@@ -182,13 +254,6 @@ class AutoIndentCodeEditor(CodeEditor):
         else:
             super().keyPressEvent(event)
 
-    def keyReleaseEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Control:
-            self.control_modifier = False
-        elif event.key() == QtCore.Qt.Key_Shift:
-            self.shift_modifier = False
-
-        super().keyReleaseEvent(event)
 
     def autopep8_code(self):
         cursor = self.textCursor()

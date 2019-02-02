@@ -16,7 +16,7 @@ python main.py
 - [ ] save + load files
 - [ ] execute file inside IDE
 - [x] multiple files in tabs open
-- [ ] project manager (e.g. folder structure)
+- [x] project manager (e.g. folder structure)
 - [ ] intellisense
 
 cant think of anything else at the moment

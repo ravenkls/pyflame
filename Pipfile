@@ -9,6 +9,7 @@ verify_ssl = true
 pyqt5 = "*"
 pycodestyle = "*"
 autopep8 = "*"
+bidict = "*"
 
 [requires]
 python_version = "3.7"
