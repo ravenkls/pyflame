@@ -155,9 +155,19 @@ class AutoIndentCodeEditor(CodeEditor):
         self.control_modifier = False
         self.shift_modifier = False
 
-    def keyPressEvent(self, event):
-        self.scroll_bar_position = self.verticalScrollBar().value()
+    def wheelEvent(self, event):
+        if self.control_modifier:
+            if event.angleDelta().y() > 0 and self.font_size < 32:
+                self.font_size += 1
+            elif event.angleDelta().y() < 0 and self.font_size > 1:
+                self.font_size -= 1
+            font = self.font()
+            font.setPointSize(self.font_size)
+            self.setFont(font)
+        else:
+            super().wheelEvent(event)
 
+    def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Control:
             self.control_modifier = True
         elif event.key() == QtCore.Qt.Key_Shift:

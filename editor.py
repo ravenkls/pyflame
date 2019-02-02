@@ -1,5 +1,5 @@
 from widgets import PythonCodeEditor, CodeTabWidget
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 import syntax
 import sys
 import os
@@ -9,10 +9,12 @@ class PyFlame(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.modal_dialog = None
         self.tab_widget = CodeTabWidget()
         self.setCentralWidget(self.tab_widget)
         self.configure_menu()
         self.load_css(os.path.join('resources', 'css', 'dark_theme.css'))
+        self.setMinimumSize(640, 480)
 
     def load_css(self, path):
         with open(path) as css_file:
@@ -53,19 +55,66 @@ class PyFlame(QtWidgets.QMainWindow):
                 else:
                     menu.addSeparator()
 
+    def resizeEvent(self, event):
+        if self.modal_dialog:
+            self.modal_dialog.move(self.rect().center().x() - self.modal_dialog.width() // 2,
+                                   self.rect().center().y() - self.modal_dialog.height() // 2)
+
+    def new_editor_tab(self, path):
+        if os.path.exists(path):
+            with open(path) as file:
+                contents = file.read()
+        else:
+            with open(path, 'w') as file:
+                contents = ''
+
+        tab_name = os.path.basename(path)
+        code_widget = PythonCodeEditor(self)
+        code_widget.setPlainText(contents)
+        code_widget.setFocus()
+        index = self.tab_widget.addTab(code_widget, tab_name)
+        self.tab_widget.setCurrentIndex(index)
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Escape and self.modal_dialog:
+            if self.modal_dialog.isVisible():
+                self.modal_dialog.close()
+
     # FILE MENU FUNCTIONS
     def new_file(self):
-        pass
+        self.modal_dialog = QtWidgets.QWidget(self)
+        self.modal_dialog.setObjectName('modal')
+        layout = QtWidgets.QVBoxLayout()
+        layout.setSpacing(8)
+        layout.setAlignment(QtCore.Qt.AlignVCenter)
+
+        title_label = QtWidgets.QLabel('New File...')
+        title_label.setObjectName('header')
+        layout.addWidget(title_label)
+
+        file_name_entry = QtWidgets.QLineEdit()
+        file_name_entry.setObjectName('dialog_entry')
+        file_name_entry.setPlaceholderText('Enter New Filename')
+        file_name_entry.returnPressed.connect(lambda: self.create_new_file(file_name_entry.text()))
+        layout.addWidget(file_name_entry)
+
+        self.modal_dialog.setLayout(layout)
+        self.modal_dialog.show()
+        file_name_entry.setFocus()
+        self.modal_dialog.resize(self.width(), 75)
+        self.modal_dialog.move(0, self.height() - self.modal_dialog.height())
+
+    def create_new_file(self, path):
+        if os.path.exists(path):
+            print('File Already Exists')
+        else:
+            self.new_editor_tab(path)
+        self.modal_dialog.close()
 
     def open_file(self):
         filename, filetype = QtWidgets.QFileDialog.getOpenFileName(self)
         if filename:
-            with open(filename) as file:
-                tab_name = os.path.basename(filename)
-                code_widget = PythonCodeEditor(self)
-                code_widget.setPlainText(file.read())
-                index = self.tab_widget.addTab(code_widget, tab_name)
-                self.tab_widget.setCurrentIndex(index)
+            self.new_editor_tab(filename)
 
     @property
     def code_widget(self):

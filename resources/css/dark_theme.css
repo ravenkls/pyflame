@@ -63,3 +63,25 @@ QTabBar::close-button{
 QTabBar::close-button:hover{
     image: url(resources/img/close_button_hover.png);
 }
+
+/* Modal Dialog */
+
+QWidget#modal{
+    background: #30384C;
+    border-top: 2px solid #49597c;
+}
+
+QWidget#modal > QLabel#header{
+    color: #A9B7C6;
+    font-family: Consolas;
+    font-size: 12px;
+}
+
+QLineEdit#dialog_entry{
+    background: #39435b;
+    border: 2px solid #49597c;
+    color: #A9B7C6;
+    padding: 5px;
+    max-width: 500px;
+    font-family: Consolas;
+}
