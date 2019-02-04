@@ -10,6 +10,9 @@ pyqt5 = "*"
 pycodestyle = "*"
 autopep8 = "*"
 bidict = "*"
+chardet = "*"
+win32gui = "==221.2"
+pywin32 = "==223"
 
 [requires]
 python_version = "3.7"

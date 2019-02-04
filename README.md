@@ -13,11 +13,12 @@ python main.py
 - [x] syntax highlighting
 - [x] auto indentation
 - [x] highlighting other selected words
-- [ ] save + load files
-- [ ] execute file inside IDE
+- [x] save + load files
+- [x] execute file inside IDE
 - [x] multiple files in tabs open
 - [x] project manager (e.g. folder structure)
 - [ ] intellisense
+- [ ] better splash screen on welcome 
 
 cant think of anything else at the moment
 

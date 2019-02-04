@@ -1,4 +1,4 @@
-from widgets import PythonCodeEditor, CodeTabWidget, ProjectStructureDock
+from widgets import PythonCodeEditor, CodeTabWidget, ProjectStructureDock, RunConsoleDock
 from PyQt5 import QtWidgets, QtCore, QtGui
 import syntax
 import sys
@@ -6,9 +6,15 @@ import os
 
 class PyFlame(QtWidgets.QMainWindow):
 
-    def __init__(self):
+    def __init__(self, primary_colour='#000000'):
         super().__init__()
         self.modal_dialog = None
+
+        # Colours
+        self.primary_colour = QtGui.QColor(primary_colour)
+        self.secondary_colour = self.primary_colour.lighter(180)
+        self.stylesheet = os.path.join('resources', 'css', 'dark_theme.css')
+        self.load_css(self.stylesheet)
 
         # Code Area
         self.tab_widget = CodeTabWidget()
@@ -17,19 +23,25 @@ class PyFlame(QtWidgets.QMainWindow):
         # Project Folder Area
         self.project_structure = ProjectStructureDock(self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.project_structure)
-        self.project_structure.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
         self.project_structure.file_opened.connect(self.new_editor_tab)
+
+        # Run Console Area
+        self.run_console = RunConsoleDock(self)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.run_console)
 
         self.setCentralWidget(self.tab_widget)
         self.configure_menu()
-        self.load_css(os.path.join('resources', 'css', 'dark_theme.css'))
         self.setMinimumSize(640, 480)
         self.tabs_metadata = {}
         self.files_open = []
 
     def load_css(self, path):
         with open(path) as css_file:
-            self.setStyleSheet(css_file.read())
+            css = css_file.read().replace('%PRIMARY%', self.primary_colour.name())
+            css = css.replace('%SECONDARY%', self.secondary_colour.name())
+            css = css.replace('%HIGHLIGHTED%', self.primary_colour.lighter(150).name())
+            css = css.replace('%HOVER%', self.primary_colour.lighter(125).name())
+            self.setStyleSheet(css)
 
     def configure_menu(self):
         menu_structure = {
@@ -82,6 +94,12 @@ class PyFlame(QtWidgets.QMainWindow):
         if event.key() == QtCore.Qt.Key_Escape and self.modal_dialog:
             if self.modal_dialog.isVisible():
                 self.modal_dialog.close()
+        elif event.key() == QtCore.Qt.Key_F5:
+            try:
+                path = self.tab_widget.open_editors.inv[self.tab_widget.currentWidget()]
+                self.run_console.run_script(path)
+            except KeyError:
+                pass
 
     # FILE MENU FUNCTIONS
     def new_file(self):
@@ -121,10 +139,17 @@ class PyFlame(QtWidgets.QMainWindow):
 
     @property
     def code_widget(self):
-        return self.tab_widget.currentWidget()
+        if not self.tab_widget.welcome_tab:
+            return self.tab_widget.currentWidget()
+
+    @property
+    def code_widget_path(self):
+        return self.tab_widget.open_editors.inv.get(self.code_widget)
 
     def save_file(self):
-        pass
+        if self.code_widget_path:
+            with open(self.code_widget_path, 'w') as file:
+                file.write(self.code_widget.toPlainText())
 
     def save_as(self):
         pass

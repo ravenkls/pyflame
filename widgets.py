@@ -1,14 +1,94 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from itertools import accumulate
 from bidict import MutableBidict
+import time
 import autopep8
 import syntax
+import subprocess
+import chardet
 import re
 import os
 
-def qcolor_to_string(qcolor):
-    r, g, b, a = qcolor.red(), qcolor.green(), qcolor.blue(), qcolor.alpha()
-    return f'rgba({r}, {g}, {b}, {a})'
+
+class RunConsoleDock(QtWidgets.QDockWidget):
+    def __init__(self, parent=None):
+        self.scroll_bar_at_bottom = False
+
+        super().__init__('Run Console', parent)
+
+        self.title_bar = QtWidgets.QWidget(self)
+        self.title_bar.setObjectName('dock_title')
+        title_layout = QtWidgets.QHBoxLayout(self.title_bar)
+        title_layout.setContentsMargins(5, 0, 5, 0)
+
+        self.title_label = QtWidgets.QLabel('Run Console', self.title_bar)
+        self.title_label.setObjectName('dock_title_label')
+        size_policy = QtWidgets.QSizePolicy()
+        size_policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
+        self.title_label.setSizePolicy(size_policy)
+        title_layout.addWidget(self.title_label)
+
+        self.close_button = QtWidgets.QPushButton(self.title_bar)
+        self.close_button.setObjectName('dock_close')
+        self.close_button.clicked.connect(self.close)
+        title_layout.addWidget(self.close_button)
+
+        self.title_bar.setLayout(title_layout)
+        self.setTitleBarWidget(self.title_bar)
+
+        self.output_label = QtWidgets.QPlainTextEdit(self)
+        self.output_label.setReadOnly(True)
+        self.output_label.setObjectName('console')
+
+        self.setWidget(self.output_label)
+
+    def update_output(self, text):
+        scroll_bar = self.output_label.verticalScrollBar()
+        self.output_label.insertPlainText(text)
+        if self.scroll_bar_at_bottom:
+            self.output_label.verticalScrollBar().setValue(self.output_label.verticalScrollBar().maximum())
+        if scroll_bar.value() == scroll_bar.maximum():
+            self.scroll_bar_at_bottom = True
+        else:
+            self.scroll_bar_at_bottom = False
+
+    def run_script(self, file):
+        self.script_thread = RunScriptThread(file)
+        self.script_thread.stdout.connect(self.update_output)
+        self.script_thread.finished_stdout.connect(self.output_label.setPlainText)
+        self.script_thread.start()
+
+
+class RunScriptThread(QtCore.QThread):
+
+    stdout = QtCore.pyqtSignal(str)
+    finished_stdout = QtCore.pyqtSignal(str)
+
+    def __init__(self, file):
+        super().__init__()
+        self.file = file
+        self.total_stdout = f'Executing {file}...\n'
+        self.next_stdout = self.total_stdout
+
+    def run(self):
+        self.finished_stdout.emit(self.next_stdout)
+        start_time = time.time()
+        process = subprocess.Popen('python ' + self.file, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        emits = 0
+        while process.poll() is None:
+            next_line = process.stdout.readline()
+            self.total_stdout += next_line.decode()
+            self.next_stdout += next_line.decode()
+            if round(time.time() - start_time, 1) > emits * 0.2:
+                self.stdout.emit(self.next_stdout)
+                self.next_stdout = ''
+                emits += 1
+        time_taken = time.time() - start_time
+        cleanup, errors = process.communicate()
+        final_string = self.total_stdout + cleanup.decode()
+        if errors:
+            final_string += '\n' + errors.decode() + '\n'
+        self.finished_stdout.emit(final_string + '\nTime Elapsed: {}s\n'.format(round(time_taken, 5)))
 
 
 class ProjectStructureDock(QtWidgets.QDockWidget):
@@ -17,6 +97,7 @@ class ProjectStructureDock(QtWidgets.QDockWidget):
 
     def __init__(self, parent=None):
         super().__init__('Project Structure', parent)
+
         self.title_bar = QtWidgets.QWidget(self)
         self.title_bar.setObjectName('dock_title')
         title_layout = QtWidgets.QHBoxLayout(self.title_bar)
@@ -37,6 +118,13 @@ class ProjectStructureDock(QtWidgets.QDockWidget):
         self.title_bar.setLayout(title_layout)
         self.setTitleBarWidget(self.title_bar)
         self.init_project_structure_widget()
+        self.dockLocationChanged.connect(self.style_borders)
+
+    def style_borders(self, location):
+        primary_colour = self.parent().primary_colour.name()
+        secondary_colour = self.parent().secondary_colour.name()
+        self.title_label.setStyleSheet(f'QLabel#dock_title_label{{border-bottom: 1px solid {secondary_colour};}}')
+        self.title_bar.setStyleSheet(f'QWidget#dock_title{{border-bottom: 1px solid {secondary_colour};}}')
 
     def init_project_structure_widget(self):
         self.filesystem_model = QtWidgets.QFileSystemModel()
@@ -50,7 +138,6 @@ class ProjectStructureDock(QtWidgets.QDockWidget):
         self.project_structure_tree.setObjectName('project_structure')
         self.project_structure_tree.setHeaderHidden(True)
         self.project_structure_tree.activated.connect(self.item_clicked)
-        #self.project_structure_tree.doubleClicked.connect(self.item_clicked)
         self.setWidget(self.project_structure_tree)
 
     def item_clicked(self, index):
@@ -63,14 +150,23 @@ class ProjectStructureDock(QtWidgets.QDockWidget):
 class CodeTabWidget(QtWidgets.QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName('code_tabs')
         self.open_editors = MutableBidict()
+        self.welcome_tab = self.show_welcome_tab()
         self.setTabsClosable(True)
         self.setMovable(True)
 
     def addTab(self, path):
+        read_only = False
         if os.path.exists(path):
-            with open(path) as file:
-                contents = file.read()
+            with open(path, 'rb') as file:
+                try:
+                    file_bytes = file.read()
+                    encoding = chardet.detect(file_bytes)['encoding']
+                    contents = file_bytes.decode(encoding)
+                except UnicodeDecodeError:
+                    contents = str(file_bytes)[2:-2]
+                    read_only = True
         else:
             with open(path, 'w') as file:
                 contents = ''
@@ -78,13 +174,47 @@ class CodeTabWidget(QtWidgets.QTabWidget):
         tab_name = os.path.basename(path)
         if not self.open_editors.get(path):
             code_widget = PythonCodeEditor(self)
+            code_widget.setReadOnly(read_only)
             code_widget.setPlainText(contents)
             code_widget.setFocus()
             self.open_editors[path] = code_widget
             super().addTab(self.open_editors[path], tab_name)
 
+        if self.welcome_tab is not None:
+            super().removeTab(self.welcome_tab)
+            self.welcome_tab = None
+
         return self.open_editors[path]
 
+    def removeTab(self, p_int):
+        widget = self.widget(p_int)
+        self.open_editors.inv.pop(widget)
+        super().removeTab(p_int)
+        if self.tabBar().count() < 1:
+            self.welcome_tab = self.show_welcome_tab()
+
+    def show_welcome_tab(self):
+        code_widget = PythonCodeEditor(self)
+        code_widget.setPlainText('import webbrowser\n'
+                                 '\n\n'
+                                 '# Welcome To PyFlame\n'
+                                 '# Made by Kristian Smith\n\n\n'
+                                 'GITHUB_URL = \'https://www.github.com/ravenkls\'\n'
+                                 'REDDIT_URL = \'https://www.reddit.com/user/raaaaavenn\'\n'
+                                 'DONATE_URL = \'https://www.paypal.me/kristian01\'\n\n\n'
+                                 'if input(\'Start new project? \').lower() == \'y\':\n'
+                                 '    pyflame = PyFlame()\n'
+                                 '    pyflame.start_project()\n'
+                                 '    print(\'Yay!\')\n'
+                                 'else:\n'
+                                 '    print(\'Okay, check out my GitHub instead!\')\n'
+                                 '    webbrowser.open(GITHUB_URL)\n')
+        code_widget.setReadOnly(True)
+        index = super().addTab(code_widget, 'welcome.py')
+        button = QtWidgets.QPushButton()
+        button.setStyleSheet('width: 0px; padding: 0px; margin: 0px; background: transparent;')
+        self.tabBar().setTabButton(index, QtWidgets.QTabBar.RightSide, button)
+        return index
 
 class LineNumberArea(QtWidgets.QWidget):
     def __init__(self, editor):
@@ -139,7 +269,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         if selection_end != len(plaintext):
             selection_end += 1
         selection_context = plaintext[selection_start:selection_end]
-        regexp = QtCore.QRegExp(rf'\b{selection_word}\b')
+        regexp = QtCore.QRegExp(rf'\b{re.escape(selection_word)}\b')
         if regexp.indexIn(selection_context, 0) >= 0:
             index = regexp.indexIn(plaintext, 0)
             extra_selections = []
@@ -159,9 +289,9 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
 
     def activate_theme(self):
         '''Change the current theme'''
-        background_colour = qcolor_to_string(self.theme['editor_background'])
-        identifiers_colour = qcolor_to_string(self.theme['identifiers'])
-        selection_colour = qcolor_to_string(self.theme['cursor_selection_colour'])
+        background_colour = self.theme['editor_background'].name()
+        identifiers_colour = self.theme['identifiers'].name()
+        selection_colour = self.theme['cursor_selection_colour'].name()
         self.setStyleSheet(f'background: {background_colour};'
                            f'color: {identifiers_colour};'
                            f'selection-background-color: {selection_colour};'

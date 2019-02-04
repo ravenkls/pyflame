@@ -1,22 +1,20 @@
 
 QMainWindow{
- background: #30384c;
+ background: %PRIMARY%;
 }
 
 QMainWindow::separator{
-    width: 0px;
-    height: 0px;
-    margin: 0px;
-    padding: 0px;
+    width: 1px;
+    background: %SECONDARY%;
 }
 
 /* MENU BAR STYLE */
 
 QMenuBar{
-     background: #30384c;
+     background: %PRIMARY%;
      color: #A9B7C6;
      font-family: Consolas;
-     border-bottom: 1px solid #49597c;
+     border-bottom: 1px solid %SECONDARY%;
      font-size: 12;
      padding: 2px;
 }
@@ -29,8 +27,8 @@ QMenuBar::item:selected{
 /* MENU DROPDOWN STYLE */
 
 QMenu{
-    background-color: #30384c;
-    border: 2px solid #49597c;
+    background-color: %PRIMARY%;
+    border: 2px solid %SECONDARY%;
     color: #A9B7C6;
     font-family: Consolas;
 }
@@ -45,12 +43,12 @@ QMenu::item::selected{
 }
 
 /* TAB BAR STYLE */
-QTabWidget::pane{
-    border-top: 1px solid #49597C;
+QTabWidget#code_tabs::pane{
+    border-top: 1px solid %SECONDARY%;
 }
 
-QTabBar::tab{
-    background: #30384c;
+QTabWidget#code_tabs QTabBar::tab{
+    background: %PRIMARY%;
     color: #A9B7C6;
     text-align: center;
     min-width: 10em;
@@ -58,24 +56,24 @@ QTabBar::tab{
     font-family: Consolas;
 }
 
-QTabBar::tab:selected{
-    background: #414b66;
+QTabWidget#code_tabs QTabBar::tab:selected{
+    background: %HIGHLIGHTED%;
     border-bottom: 2px solid white;
 }
 
-QTabBar::close-button{
+QTabWidget#code_tabs QTabBar::close-button{
     image: url(resources/img/close_button.png);
 }
 
-QTabBar::close-button:hover{
+QTabWidget#code_tabs QTabBar::close-button:hover{
     image: url(resources/img/close_button_hover.png);
 }
 
 /* Modal Dialog */
 
 QWidget#modal{
-    background: #30384C;
-    border-top: 1px solid #49597c;
+    background: %PRIMARY%;
+    border-top: 1px solid %SECONDARY%;
 }
 
 QWidget#modal > QLabel#header{
@@ -85,8 +83,8 @@ QWidget#modal > QLabel#header{
 }
 
 QLineEdit#dialog_entry{
-    background: #39435b;
-    border: 2px solid #49597c;
+    background: %HIGHLIGHTED%;
+    border: 2px solid %SECONDARY%;
     color: #A9B7C6;
     padding: 5px;
     max-width: 500px;
@@ -94,15 +92,11 @@ QLineEdit#dialog_entry{
 }
 
 /* Project Structure Dock */
-
 QTreeView#project_structure{
-    background: #30384c;
+    background: %PRIMARY%;
     color: #A9B7C6;
     font-family: Consolas;
     border: none;
-    border-right: 1px solid #49597c;
-    border-left: 1px solid #49597c;
-    border-bottom: 1px solid #49597c;
     padding-top: 5px;
 }
 
@@ -111,23 +105,22 @@ QTreeView#project_structure::branch{
 }
 
 QWidget#dock_title{
-    background: #30384c;
-    border-left: 1px solid #49597c;
-    border-bottom: 1px solid #49597c;
-    border-right: 1px solid #49597c;
+    background: %PRIMARY%;
+    border-bottom: 1px solid %SECONDARY%;
 }
 
 QLabel#dock_title_label{
-    background: #30384c;
+    background: %PRIMARY%;
     color: #A9B7C6;
     padding-top: 6px;
     padding-bottom: 7px;
     font-family: Consolas;
-    border-bottom: 1px solid #49597c;
+    border-bottom: 1px solid %SECONDARY%;
 }
 
 QDockWidget#project_structure{
     color: #A9B7C6;
+    border: none;
 }
 
 QPushButton#dock_close{
@@ -136,7 +129,7 @@ QPushButton#dock_close{
     width: 12px;
     height: 12px;
     padding-right: 10px;
-    background-color: #30384c;
+    background-color: %PRIMARY%;
     border: none;
     background-image: url("resources/img/close_button.png");
     background-position: center;
@@ -145,4 +138,13 @@ QPushButton#dock_close{
 
 QPushButton#dock_close:hover{
     background-image: url("resources/img/close_button_hover.png");
+}
+
+/* Run Console Dock */
+QPlainTextEdit#console{
+    background: #111;
+    border: none;
+    padding: 10px;
+    font-family: Consolas;
+    color: #A9B7C6;
 }
