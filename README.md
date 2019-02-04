@@ -22,5 +22,5 @@ python main.py
 
 cant think of anything else at the moment
 
-### Screenshots
-https://i.imgur.com/kFkIDfw.gifv
+### Screenshots / Video
+https://i.imgur.com/ZMo31cU.mp4
