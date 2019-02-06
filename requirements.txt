@@ -1,5 +1,7 @@
 -i https://pypi.org/simple
 autopep8==1.4.3
-pycodestyle==2.4.0
+bidict==0.17.5
+chardet==3.0.4
+pycodestyle==2.5.0
 pyqt5-sip==4.19.13
 pyqt5==5.11.3

@@ -1,6 +1,9 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from itertools import accumulate
 from bidict import MutableBidict
+from code import InteractiveConsole
+from io import StringIO
+import contextlib
 import time
 import autopep8
 import syntax
@@ -73,7 +76,7 @@ class RunScriptThread(QtCore.QThread):
     def run(self):
         self.finished_stdout.emit(self.next_stdout)
         start_time = time.time()
-        process = subprocess.Popen('python ' + self.file, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen('python "' + self.file + '"', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         emits = 0
         while process.poll() is None:
             next_line = process.stdout.readline()
@@ -126,12 +129,14 @@ class ProjectStructureDock(QtWidgets.QDockWidget):
         self.title_label.setStyleSheet(f'QLabel#dock_title_label{{border-bottom: 1px solid {secondary_colour};}}')
         self.title_bar.setStyleSheet(f'QWidget#dock_title{{border-bottom: 1px solid {secondary_colour};}}')
 
+    def reload_directory(self):
+        self.project_structure_tree.setRootIndex(self.filesystem_model.setRootPath(os.getcwd()))
+
     def init_project_structure_widget(self):
         self.filesystem_model = QtWidgets.QFileSystemModel()
         self.filesystem_model.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
         self.project_structure_tree = QtWidgets.QTreeView(self)
         self.project_structure_tree.setModel(self.filesystem_model)
-        self.project_structure_tree.setRootIndex(self.filesystem_model.setRootPath(os.getcwd()))
         self.project_structure_tree.hideColumn(1) # Size Column
         self.project_structure_tree.hideColumn(2) # Type Column
         self.project_structure_tree.hideColumn(3) # Date Modified Column
@@ -139,6 +144,7 @@ class ProjectStructureDock(QtWidgets.QDockWidget):
         self.project_structure_tree.setHeaderHidden(True)
         self.project_structure_tree.activated.connect(self.item_clicked)
         self.setWidget(self.project_structure_tree)
+        self.reload_directory()
 
     def item_clicked(self, index):
         path = str(self.filesystem_model.filePath(index))
@@ -245,8 +251,11 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.update_line_numbers_area_width(0)
 
         # Syntax Theme
-        self.font_family_id = QtGui.QFontDatabase.addApplicationFont('resources/fonts/FiraCode.ttf')
-        self.font_family = QtGui.QFontDatabase.applicationFontFamilies(self.font_family_id)[0]
+        self.font_family_id = QtGui.QFontDatabase.addApplicationFont(os.path.join('resources', 'fonts' 'FiraCode.ttf'))
+        try:
+            self.font_family = QtGui.QFontDatabase.applicationFontFamilies(self.font_family_id)[0]
+        except IndexError:
+            self.font_family = 'Consolas'
         self.set_highlighter(syntax.Highlighter)
         font = QtGui.QFont()
         font.setPointSize(self.font_size)

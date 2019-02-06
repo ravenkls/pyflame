@@ -6,34 +6,65 @@ import os
 
 class PyFlame(QtWidgets.QMainWindow):
 
-    def __init__(self, primary_colour='#000000'):
+    def __init__(self, settings, primary_colour='#000000'):
         super().__init__()
         self.modal_dialog = None
+        self.settings = settings
 
         # Colours
         self.primary_colour = QtGui.QColor(primary_colour)
         self.secondary_colour = self.primary_colour.lighter(180)
-        self.stylesheet = os.path.join('resources', 'css', 'dark_theme.css')
+        self.stylesheet = os.path.join(os.path.dirname(__file__), 'resources', 'css', 'dark_theme.css')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'resources', 'img', 'favicon.ico')))
         self.load_css(self.stylesheet)
 
         # Code Area
         self.tab_widget = CodeTabWidget()
         self.tab_widget.tabCloseRequested.connect(self.close_editor_tab)
+        for path in self.settings.value('last_open_files', []):
+            self.new_editor_tab(path)
 
         # Project Folder Area
+        os.chdir(self.settings.value('last_project_dir', os.getcwd()))
         self.project_structure = ProjectStructureDock(self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.project_structure)
         self.project_structure.file_opened.connect(self.new_editor_tab)
+        self.project_structure.reload_directory()
 
         # Run Console Area
         self.run_console = RunConsoleDock(self)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.run_console)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.run_console)
 
+        # Other
         self.setCentralWidget(self.tab_widget)
         self.configure_menu()
-        self.setMinimumSize(640, 480)
+        self.resize(self.settings.value('window_size', QtCore.QSize(1280, 720)))
+        self.move(self.settings.value('window_position', QtCore.QPoint(50, 50)))
+        self.setWindowTitle(f'PyFlame [{os.getcwd()}]')
         self.tabs_metadata = {}
         self.files_open = []
+
+        if self.settings.value('window_maximised', 'false') == 'true':
+            self.showMaximized()
+        else:
+            self.show()
+
+    def closeEvent(self, event):
+        self.settings.setValue('window_size', self.size())
+        self.settings.setValue('window_position', self.pos())
+        self.settings.setValue('window_maximised', self.isMaximized())
+        self.settings.setValue('last_project_dir', os.getcwd())
+        self.settings.setValue('last_open_files', list(self.tab_widget.open_editors.keys()))
+        event.accept()
+
+    @property
+    def code_widget(self):
+        if not self.tab_widget.welcome_tab:
+            return self.tab_widget.currentWidget()
+
+    @property
+    def code_widget_path(self):
+        return self.tab_widget.open_editors.inv.get(self.code_widget)
 
     def load_css(self, path):
         with open(path) as css_file:
@@ -41,6 +72,7 @@ class PyFlame(QtWidgets.QMainWindow):
             css = css.replace('%SECONDARY%', self.secondary_colour.name())
             css = css.replace('%HIGHLIGHTED%', self.primary_colour.lighter(150).name())
             css = css.replace('%HOVER%', self.primary_colour.lighter(125).name())
+            css = css.replace('%BASE_PATH%', os.path.dirname(__file__))
             self.setStyleSheet(css)
 
     def configure_menu(self):
@@ -48,6 +80,7 @@ class PyFlame(QtWidgets.QMainWindow):
             'File': (
                 ('New...', 'Ctrl+N', self.new_file),
                 ('Open', 'Ctrl+O', self.open_file),
+                ('Open Folder', None, self.open_folder),
                 ('Save', 'Ctrl+S', self.save_file),
                 ('Save As...', None, self.save_as),
                 (None, None, None),
@@ -66,6 +99,12 @@ class PyFlame(QtWidgets.QMainWindow):
                 ('Paste', 'Ctrl+V', self.paste),
                 (None, None, None),
                 ('Style Code with PEP-8', 'Shift+Alt+F', self.style_code)
+            ),
+            'View': (
+
+            ),
+            'Run': (
+                ('Execute Current File', 'F5', self.run_code),
             )
         }
         for menu_name, menu_items in menu_structure.items():
@@ -94,12 +133,13 @@ class PyFlame(QtWidgets.QMainWindow):
         if event.key() == QtCore.Qt.Key_Escape and self.modal_dialog:
             if self.modal_dialog.isVisible():
                 self.modal_dialog.close()
-        elif event.key() == QtCore.Qt.Key_F5:
-            try:
-                path = self.tab_widget.open_editors.inv[self.tab_widget.currentWidget()]
-                self.run_console.run_script(path)
-            except KeyError:
-                pass
+
+    def run_code(self):
+        try:
+            path = self.tab_widget.open_editors.inv[self.tab_widget.currentWidget()]
+            self.run_console.run_script(path)
+        except KeyError:
+            pass
 
     # FILE MENU FUNCTIONS
     def new_file(self):
@@ -137,14 +177,15 @@ class PyFlame(QtWidgets.QMainWindow):
         if filename:
             self.new_editor_tab(filename)
 
-    @property
-    def code_widget(self):
-        if not self.tab_widget.welcome_tab:
-            return self.tab_widget.currentWidget()
-
-    @property
-    def code_widget_path(self):
-        return self.tab_widget.open_editors.inv.get(self.code_widget)
+    def open_folder(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self)
+        if os.path.abspath(path) != os.path.abspath(os.getcwd()):
+            os.chdir(path)
+            if self.tab_widget.welcome_tab is None:
+                for _ in range(self.tab_widget.tabBar().count()):
+                    self.tab_widget.removeTab(0)
+            self.project_structure.reload_directory()
+        self.setWindowTitle(f'PyFlame [{os.getcwd()}]')
 
     def save_file(self):
         if self.code_widget_path:
@@ -152,7 +193,11 @@ class PyFlame(QtWidgets.QMainWindow):
                 file.write(self.code_widget.toPlainText())
 
     def save_as(self):
-        pass
+        filename, filetype = QtWidgets.QFileDialog.getSaveFileName(self)
+        if filename:
+            with open(filename, 'w') as file:
+                file.write(self.code_widget.toPlainText())
+            self.tab_widget.open_editors[self.code_widget] = filename
 
     def open_settings(self):
         pass
