@@ -1,0 +1,10 @@
+<RCC>
+  <qresource prefix="fonts">
+    <file>fonts/FiraCode.ttf</file>
+  </qresource>
+  <qresource prefix="img">
+    <file>img/close_button.png</file>
+    <file>img/close_button_hover.png</file>
+    <file>img/favicon.ico</file>
+  </qresource>
+</RCC>

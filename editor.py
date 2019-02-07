@@ -14,8 +14,8 @@ class PyFlame(QtWidgets.QMainWindow):
         # Colours
         self.primary_colour = QtGui.QColor(primary_colour)
         self.secondary_colour = self.primary_colour.lighter(180)
-        self.stylesheet = os.path.join(os.path.dirname(__file__), 'resources', 'css', 'dark_theme.css')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'resources', 'img', 'favicon.ico')))
+        self.stylesheet = 'resources/theme.css'
+        self.setWindowIcon(QtGui.QIcon(':/img/favicon.ico'))
         self.load_css(self.stylesheet)
 
         # Code Area
@@ -73,6 +73,7 @@ class PyFlame(QtWidgets.QMainWindow):
             css = css.replace('%HIGHLIGHTED%', self.primary_colour.lighter(150).name())
             css = css.replace('%HOVER%', self.primary_colour.lighter(125).name())
             css = css.replace('%BASE_PATH%', os.path.dirname(__file__))
+            css = css.replace('%CONSOLE_BG%', self.primary_colour.darker(250).name())
             self.setStyleSheet(css)
 
     def configure_menu(self):

@@ -62,11 +62,11 @@ QTabWidget#code_tabs QTabBar::tab:selected{
 }
 
 QTabWidget#code_tabs QTabBar::close-button{
-    image: url(%BASE_PATH%\resources\img\close_button.png);
+    image: url(":/img/close_button.png");
 }
 
 QTabWidget#code_tabs QTabBar::close-button:hover{
-    image: url(%BASE_PATH%\resources\img\close_button_hover.png);
+    image: url(":/img/close_button_hover.png");
 }
 
 /* Modal Dialog */
@@ -131,18 +131,18 @@ QPushButton#dock_close{
     padding-right: 10px;
     background-color: %PRIMARY%;
     border: none;
-    background-image: url(%BASE_PATH%\resources\img\close_button.png);
+    background-image: url(":/img/close_button.png");
     background-position: center;
     background-repeat: no-repeat;
 }
 
 QPushButton#dock_close:hover{
-    background-image: url(%BASE_PATH%\resources\img\close_button_hover.png);
+    background-image: url(":/img/close_button_hover.png");
 }
 
 /* Run Console Dock */
 QPlainTextEdit#console{
-    background: #111;
+    background: %CONSOLE_BG%;
     border: none;
     padding: 10px;
     font-family: Consolas;

@@ -158,9 +158,10 @@ class CodeTabWidget(QtWidgets.QTabWidget):
         super().__init__(parent)
         self.setObjectName('code_tabs')
         self.open_editors = MutableBidict()
-        self.welcome_tab = self.show_welcome_tab()
         self.setTabsClosable(True)
         self.setMovable(True)
+        self.welcome_tab = self.show_welcome_tab()
+        
 
     def addTab(self, path):
         read_only = False
@@ -188,6 +189,7 @@ class CodeTabWidget(QtWidgets.QTabWidget):
 
         if self.welcome_tab is not None:
             super().removeTab(self.welcome_tab)
+            self.setTabsClosable(True)
             self.welcome_tab = None
 
         return self.open_editors[path]
@@ -217,9 +219,7 @@ class CodeTabWidget(QtWidgets.QTabWidget):
                                  '    webbrowser.open(GITHUB_URL)\n')
         code_widget.setReadOnly(True)
         index = super().addTab(code_widget, 'welcome.py')
-        button = QtWidgets.QPushButton()
-        button.setStyleSheet('width: 0px; padding: 0px; margin: 0px; background: transparent;')
-        self.tabBar().setTabButton(index, QtWidgets.QTabBar.RightSide, button)
+        self.setTabsClosable(False)
         return index
 
 class LineNumberArea(QtWidgets.QWidget):
@@ -251,7 +251,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.update_line_numbers_area_width(0)
 
         # Syntax Theme
-        self.font_family_id = QtGui.QFontDatabase.addApplicationFont(os.path.join('resources', 'fonts' 'FiraCode.ttf'))
+        self.font_family_id = QtGui.QFontDatabase.addApplicationFont(':/fonts/FiraCode.ttf')
         try:
             self.font_family = QtGui.QFontDatabase.applicationFontFamilies(self.font_family_id)[0]
         except IndexError:
