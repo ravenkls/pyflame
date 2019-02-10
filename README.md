@@ -5,7 +5,7 @@ This is an IDE coded in python, it is work in progress at the moment and doesnt 
  - Complex regular expressions were needed for syntax highlighting
  - Planning ahead by creating modular methods and functions which can be reused
 
-## How to download it
+## How to use it
 ```buildoutcfg
 git clone https://github.com/ravenkls/pyflame.git
 cd pyflame
